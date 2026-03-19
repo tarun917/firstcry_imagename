@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firstcry Image Renamer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            color: rgba(255,255,255,0.8);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .instructions {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .instructions h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .structure {
+            font-family: monospace;
+            background: #2d3436;
+            color: #00ff88;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .drop-zone {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 60px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9ff;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            background: #e8edff;
+            border-color: #764ba2;
+            transform: scale(1.02);
+        }
+        .drop-zone h2 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .drop-zone p {
+            color: #666;
+        }
+        .results {
+            margin-top: 20px;
+            display: none;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .results.show { display: block; }
+        .folder-item {
+            background: #f0f0f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        .folder-name {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        .file-rename {
+            font-family: monospace;
+            font-size: 12px;
+            padding: 5px 10px;
+            background: white;
+            border-radius: 5px;
+            margin: 3px 0;
+            display: flex;
+            align-items: center;
+        }
+        .old-name { color: #e74c3c; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+        .arrow { color: #333; margin: 0 10px; }
+        .new-name { color: #27ae60; font-weight: bold; }
+        .download-btn {
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 30px;
+            cursor: pointer;
+            margin-top: 20px;
+            display: none;
+            transition: transform 0.2s;
+        }
+        .download-btn:hover {
+            transform: scale(1.05);
+        }
+        .download-btn.show { display: inline-block; }
+        .stats {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+            font-size: 1.2em;
+        }
+        .processing {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        .processing.show { display: block; }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .tip {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px 15px;
+            margin-bottom: 20px;
+            border-radius: 0 8px 8px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛒 Firstcry Image Renamer</h1>
+        <p class="subtitle">Folder name से ID extract → Images rename: 123a, 123b, 123c...</p>
+
+        <div class="card">
+            <div class="tip">
+                💡 <strong>Google Drive से:</strong> Folder download करो (ZIP) → वो ZIP यहाँ drop करो!
+            </div>
+
+            <div class="instructions">
+                <h3>📁 Expected Structure:</h3>
+                <div class="structure">
+MainFolder/<br>
+├── BookName_9789395767804_dp/<br>
+│   ├── image1.jpg  → 9789395767804a.jpg<br>
+│   ├── image2.jpg  → 9789395767804b.jpg<br>
+│   └── image3.jpg  → 9789395767804c.jpg<br>
+├── AnotherBook_9789876543210_dp/<br>
+│   └── photo.png   → 9789876543210a.png
+                </div>
+            </div>
+
+            <div class="drop-zone" id="dropZone">
+                <h2>📂 Folder या ZIP यहाँ Drop करें</h2>
+                <p style="margin-bottom:15px">या नीचे button से select करें</p>
+                <button onclick="document.getElementById('folderInput').click()" style="padding:10px 25px;margin:5px;cursor:pointer;border-radius:8px;border:none;background:#667eea;color:white;font-size:16px;">📁 Folder Select</button>
+                <button onclick="document.getElementById('zipInput').click()" style="padding:10px 25px;margin:5px;cursor:pointer;border-radius:8px;border:none;background:#e74c3c;color:white;font-size:16px;">📦 ZIP Select</button>
+                <input type="file" id="folderInput" webkitdirectory directory multiple style="display:none">
+                <input type="file" id="zipInput" accept=".zip" style="display:none">
+            </div>
+
+            <div class="processing" id="processing">
+                <div class="spinner"></div>
+                <p id="processingText">Processing...</p>
+            </div>
+
+            <div class="results" id="results"></div>
+
+            <div style="text-align: center;">
+                <button class="download-btn" id="downloadBtn">⬇️ Download Renamed Images (ZIP)</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const folderInput = document.getElementById('folderInput');
+        const zipInput = document.getElementById('zipInput');
+        const resultsDiv = document.getElementById('results');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const processing = document.getElementById('processing');
+        const processingText = document.getElementById('processingText');
+
+        let outputZip = null;
+
+
+        // Drag & Drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        dropZone.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+
+            const items = e.dataTransfer.items;
+            const files = e.dataTransfer.files;
+
+            // Check if ZIP file
+            if (files.length === 1 && files[0].name.endsWith('.zip')) {
+                await handleZipFile(files[0]);
+            } else {
+                await handleItems(items);
+            }
+        });
+
+        // Folder input change
+        folderInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        // ZIP input change
+        zipInput.addEventListener('change', async (e) => {
+            if (e.target.files.length > 0) {
+                await handleZipFile(e.target.files[0]);
+            }
+        });
+
+        // Handle ZIP file from Google Drive
+        async function handleZipFile(zipFile) {
+            showProcessing('ZIP extract हो रहा है...');
+
+            try {
+                const zip = await JSZip.loadAsync(zipFile);
+                const files = [];
+
+                for (let [path, zipEntry] of Object.entries(zip.files)) {
+                    if (!zipEntry.dir && isImageFile(path)) {
+                        const blob = await zipEntry.async('blob');
+                        const file = new File([blob], path.split('/').pop(), { type: getMimeType(path) });
+                        files.push({ file, path });
+                    }
+                }
+
+                if (files.length === 0) {
+                    alert('ZIP में कोई image नहीं मिली!');
+                    hideProcessing();
+                    return;
+                }
+
+                await processFiles(files);
+            } catch (err) {
+                alert('ZIP read करने में error: ' + err.message);
+                hideProcessing();
+            }
+        }
+
+        function isImageFile(path) {
+            const ext = path.split('.').pop().toLowerCase();
+            return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'tif'].includes(ext);
+        }
+
+        function getMimeType(path) {
+            const ext = path.split('.').pop().toLowerCase();
+            const types = {
+                'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+                'png': 'image/png', 'gif': 'image/gif',
+                'bmp': 'image/bmp', 'webp': 'image/webp',
+                'tiff': 'image/tiff', 'tif': 'image/tiff'
+            };
+            return types[ext] || 'image/jpeg';
+        }
+
+        async function handleItems(items) {
+            showProcessing('Folders read हो रहे हैं...');
+            const files = [];
+            for (let item of items) {
+                const entry = item.webkitGetAsEntry();
+                if (entry) {
+                    await readEntry(entry, '', files);
+                }
+            }
+            await processFiles(files);
+        }
+
+        async function readEntry(entry, path, files) {
+            if (entry.isFile) {
+                const file = await new Promise(resolve => entry.file(resolve));
+                files.push({ file, path: path + entry.name });
+            } else if (entry.isDirectory) {
+                const reader = entry.createReader();
+                const entries = await new Promise(resolve => reader.readEntries(resolve));
+                for (let e of entries) {
+                    await readEntry(e, path + entry.name + '/', files);
+                }
+            }
+        }
+
+        function handleFiles(fileList) {
+            showProcessing('Files process हो रही हैं...');
+            const files = Array.from(fileList).map(f => ({
+                file: f,
+                path: f.webkitRelativePath
+            }));
+            processFiles(files);
+        }
+
+        function getSuffix(index) {
+            const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+            if (index < 26) return alphabet[index];
+            const first = Math.floor(index / 26) - 1;
+            const second = index % 26;
+            if (first >= 0) return alphabet[first] + alphabet[second];
+            return alphabet[second];
+        }
+
+        // Extract Firstcry ID from folder name
+        function extractFirstcryID(folderName) {
+            // Pattern 1: BookName_9789395767804_dp -> 9789395767804
+            let match = folderName.match(/_(\d{10,})(?:_dp)?/i);
+            if (match) return match[1];
+
+            // Pattern 2: Any long number sequence in the name
+            match = folderName.match(/(\d{10,})/);
+            if (match) return match[1];
+
+            // Pattern 3: If folder name is just numbers
+            if (/^\d+$/.test(folderName)) return folderName;
+
+            // Fallback
+            return folderName;
+        }
+
+        function showProcessing(text) {
+            dropZone.style.display = 'none';
+            processingText.textContent = text;
+            processing.classList.add('show');
+        }
+
+        function hideProcessing() {
+            processing.classList.remove('show');
+            dropZone.style.display = 'block';
+        }
+
+        async function processFiles(files) {
+            showProcessing('Images rename हो रही हैं...');
+
+            const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.tif'];
+            const folders = {};
+
+            for (let {file, path} of files) {
+                const parts = path.split('/').filter(p => p);
+                if (parts.length < 2) continue;
+
+                const folderName = parts[parts.length - 2];
+                const firstcryID = extractFirstcryID(folderName);
+                const fileName = parts[parts.length - 1];
+                const ext = '.' + fileName.split('.').pop().toLowerCase();
+
+                if (!imageExts.includes(ext)) continue;
+
+                if (!folders[folderName]) folders[folderName] = { id: firstcryID, images: [] };
+                folders[folderName].images.push({ file, fileName, ext });
+            }
+
+            if (Object.keys(folders).length === 0) {
+                alert('कोई valid image folders नहीं मिले!\n\nStructure check करें:\nMainFolder/\n  ├── ID_Folder/\n  │   └── images...');
+                hideProcessing();
+                return;
+            }
+
+            // Process and rename
+            outputZip = new JSZip();
+            let html = '';
+            let totalImages = 0;
+
+            for (let folderName of Object.keys(folders).sort()) {
+                const { id: firstcryID, images } = folders[folderName];
+                const sortedImages = images.sort((a, b) => a.fileName.localeCompare(b.fileName));
+
+                html += `<div class="folder-item">`;
+                html += `<div class="folder-name">📁 ${folderName}/ → <strong>${firstcryID}</strong></div>`;
+
+                const folderZip = outputZip.folder(firstcryID);
+
+                for (let i = 0; i < sortedImages.length; i++) {
+                    const { file, fileName, ext } = sortedImages[i];
+                    const suffix = getSuffix(i);
+                    const newName = firstcryID + suffix + ext;
+
+                    folderZip.file(newName, file);
+
+                    html += `<div class="file-rename">
+                        <span class="old-name">${fileName}</span>
+                        <span class="arrow">→</span>
+                        <span class="new-name">${newName}</span>
+                    </div>`;
+                    totalImages++;
+                }
+                html += `</div>`;
+            }
+
+            html += `<div class="stats">✅ ${totalImages} images → ${Object.keys(folders).length} folders</div>`;
+
+            processing.classList.remove('show');
+            resultsDiv.innerHTML = html;
+            resultsDiv.classList.add('show');
+            downloadBtn.classList.add('show');
+        }
+
+        // Download ZIP
+        downloadBtn.addEventListener('click', async () => {
+            downloadBtn.textContent = '⏳ ZIP बन रहा है...';
+            downloadBtn.disabled = true;
+
+            const blob = await outputZip.generateAsync({ type: 'blob' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Firstcry_Renamed_Images.zip';
+            a.click();
+            URL.revokeObjectURL(url);
+
+            downloadBtn.textContent = '⬇️ Download Renamed Images (ZIP)';
+            downloadBtn.disabled = false;
+        });
+    </script>
+</body>
+</html>
